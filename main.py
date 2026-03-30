@@ -6,7 +6,6 @@ Command-line interface for running simulations
 import sys
 import yaml
 import argparse
-import numpy as np
 from pathlib import Path
 
 from src.simulation_engine import SimulationEngine
@@ -194,16 +193,12 @@ def configure_from_floorplan(filepath: str, scale: float = None,
             'speed_range': [1.0, 1.6],
             'radius_range': [0.25, 0.35],
             'visibility_range': [max(width, height) * 1.5, max(width, height) * 2.0],  # Scale with building size
-            'panic_threshold': 0.3,
-            'panic_spread_radius': 5.0,
-            'panic_spread_rate': 0.15,
-            'max_panic_level': 1.0
+            'panic_threshold': 0.3
         },
         'motion': {
             'model': 'hybrid',
             'sfm': {
                 'relaxation_time': 0.5,
-                'desired_speed_factor': 1.0,
                 'agent_strength': 2000.0,
                 'agent_range': 0.08,
                 'wall_strength': 2000.0,
@@ -216,7 +211,6 @@ def configure_from_floorplan(filepath: str, scale: float = None,
                 'max_neighbors': 10
             },
             'pathfinding': {
-                'algorithm': 'astar',
                 'replan_interval': 1.5,
                 'congestion_weight': 0.4,
                 'hazard_weight': 0.6
@@ -256,23 +250,12 @@ def configure_from_floorplan(filepath: str, scale: float = None,
         'obstacles': {
             'rectangles': []
         },
-        'floorplan': {
-            'type': floorplan_type,
-            'file_path': str(filepath),
-            'scale': scale,
-            'origin': [0, 0]
-        },
         'visualization': {
             'enabled': True,
             'fps': 30,
-            'realtime': False,
             'show_trajectories': False,
             'show_panic_levels': True,
-            'show_hazards': True,
-            'video_export': False,
-            'video_path': 'output/floorplan_simulation.mp4',
-            'heatmap_export': True,
-            'heatmap_path': 'output/heatmaps'
+            'show_hazards': True
         },
         'analytics': {
             'enabled': True,
@@ -283,8 +266,7 @@ def configure_from_floorplan(filepath: str, scale: float = None,
             'bottleneck_threshold': 5.0
         },
         'output': {
-            'directory': 'output',
-            'save_final_state': True
+            'directory': 'output'
         }
     }
     

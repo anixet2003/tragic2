@@ -4,7 +4,7 @@ DXF and raster image parsing for environment generation
 """
 
 import numpy as np
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 from pathlib import Path
 
 try:
@@ -521,34 +521,3 @@ class ImageParser:
                 self.exits.append(exit_obj)
 
 
-def load_floorplan(config: dict):
-    """
-    Load floorplan based on configuration.
-    
-    Args:
-        config: Floorplan configuration
-        
-    Returns:
-        Tuple of (obstacles, exits) or (None, None) if no floorplan
-    """
-    floorplan_type = config.get('type', 'none')
-    
-    if floorplan_type == 'none':
-        return None, None
-    
-    file_path = config.get('file_path')
-    scale = config.get('scale', 1.0)
-    
-    if not file_path:
-        print("Warning: Floorplan type specified but no file path provided.")
-        return None, None
-    
-    if floorplan_type == 'dxf':
-        parser = DXFParser(file_path, scale)
-        return parser.parse()
-    elif floorplan_type == 'image':
-        parser = ImageParser(file_path, scale)
-        return parser.parse()
-    else:
-        print(f"Warning: Unknown floorplan type '{floorplan_type}'")
-        return None, None

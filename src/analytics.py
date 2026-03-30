@@ -4,7 +4,7 @@ Tracks simulation metrics, computes evacuation KPIs, detects bottlenecks
 """
 
 import numpy as np
-from typing import List, Dict, Tuple
+from typing import List, Dict
 import csv
 from pathlib import Path
 
@@ -284,21 +284,3 @@ class AnalyticsCollector:
         
         return "\n".join(report)
     
-    def get_exit_statistics(self, exits: List) -> Dict:
-        """
-        Get statistics for each exit.
-        
-        Args:
-            exits: List of exit objects
-            
-        Returns:
-            Dictionary of exit statistics
-        """
-        stats = {}
-        for exit_obj in exits:
-            stats[exit_obj.id] = {
-                'position': exit_obj.position.tolist(),
-                'total_evacuated': exit_obj.total_evacuated,
-                'final_status': exit_obj.status
-            }
-        return stats

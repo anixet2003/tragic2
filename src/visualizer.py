@@ -1,31 +1,27 @@
 """
 Visualization System
-Real-time rendering and video export
+Real-time rendering and heatmap export
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, FFMpegWriter
 from matplotlib.patches import Rectangle, Circle
 import matplotlib.cm as cm
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 
 class Visualizer:
     """
-    Handles real-time visualization and video export.
+    Handles real-time visualization and heatmap export.
     """
     
     def __init__(self, config: dict, environment):
         self.enabled = config.get('enabled', True)
         self.fps = config.get('fps', 240)
-        self.realtime = config.get('realtime', False)
         self.show_trajectories = config.get('show_trajectories', True)
         self.show_panic_levels = config.get('show_panic_levels', True)
         self.show_hazards = config.get('show_hazards', True)
-        self.video_export = config.get('video_export', False)  # Disabled by default
-        self.video_path = config.get('video_path', 'output/simulation.mp4')
         
         # Trail configuration
         self.trail_length = config.get('trail_length', 50)  # Number of positions to show in trail
@@ -41,11 +37,6 @@ class Visualizer:
             self.fig.canvas.toolbar_visible = False  # Hide toolbar to avoid tkinter issues
             self.setup_plot()
             
-            # Storage for animation frames
-            self.frames = []
-            
-            # Track agent trajectories
-            self.agent_trails = {}
     
     def setup_plot(self):
         """Initialize plot settings."""
@@ -248,21 +239,6 @@ class Visualizer:
             plt.draw()
             plt.pause(0.001)
     
-    def save_frame(self):
-        """Save current frame for video export."""
-        if self.video_export:
-            self.frames.append(self.fig)
-    
-    def export_video(self):
-        """Export simulation as video."""
-        if not self.video_export or not self.frames:
-            return
-        
-        Path(self.video_path).parent.mkdir(parents=True, exist_ok=True)
-        print(f"Exporting video to {self.video_path}...")
-        # Video export would require additional setup with FFmpeg
-        # For MVP, we'll just save the figure
-        print("Video export requires FFmpeg - skipping for MVP")
     
     def export_movement_paths(self, agents: List, filename: str = 'output/agent_paths.png', floorplan_path: str = None):
         """

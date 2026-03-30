@@ -4,7 +4,7 @@ Implements three motion strategies for agent navigation
 """
 
 import numpy as np
-from typing import List, Tuple, Optional, Set
+from typing import List, Tuple
 import heapq
 from collections import defaultdict
 

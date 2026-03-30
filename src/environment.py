@@ -5,7 +5,6 @@ Manages spatial representation, obstacles, exits, and spatial indexing
 
 import numpy as np
 from typing import List, Tuple, Dict, Optional
-from scipy.spatial import KDTree
 
 
 class Exit:

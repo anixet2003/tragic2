@@ -10,7 +10,7 @@ TRAGIC is a comprehensive simulation framework designed to:
 - Analyze emergency situations with hazards like fire, smoke, and exit failures
 - Process real-world floorplans using YOLOv8 deep learning
 - Generate detailed analytics, heatmaps, and visualizations
-- Support multiple motion models: Social Force Model (SFM), Reciprocal Velocity Obstacles (RVO), A* Pathfinding, and Hybrid approaches
+- Support multiple motion models: Social Force Model (SFM), Reciprocal Velocity Obstacles (RVO), A* Pathfinding, and hybrid approaches
 
 ## ✨ Key Features
 
@@ -36,7 +36,6 @@ TRAGIC is a comprehensive simulation framework designed to:
 - **Real-time Visualization**: Animated simulation with agent trails and hazard overlays
 - **Heatmap Generation**: Density, panic, and evacuation flow heatmaps
 - **Statistical Analysis**: CSV export with time-series data on evacuations, casualties, and panic levels
-- **Video Export**: MP4 video output of full simulations
 
 ## 🚀 Getting Started
 
@@ -57,27 +56,27 @@ TRAGIC is a comprehensive simulation framework designed to:
    ```bash
    # Create virtual environment
    python -m venv .venv
-   
+
    # Activate on macOS/Linux
    source .venv/bin/activate
-   
+
    # Activate on Windows
    .venv\Scripts\activate
    ```
 
 3. **Install dependencies**:
-   
+
    **Option A - Using pip** (traditional):
    ```bash
    pip install -r requirements.txt
    ```
-   
+
    **Option B - Using uv** (faster, recommended):
    ```bash
    # Install uv first (macOS/Linux)
    curl -LsSf https://astral.sh/uv/install.sh | sh
    source $HOME/.local/bin/env
-   
+
    # Install dependencies with uv
    uv pip install -r requirements.txt
    ```
@@ -111,7 +110,6 @@ python main.py bc.jpeg
 ### Configuration Options
 
 Customize simulation parameters via command-line arguments:
-
 ```bash
 python main.py path/to/floorplan.jpg \
     --agents 500 \
@@ -122,23 +120,18 @@ python main.py path/to/floorplan.jpg \
 
 **Available Arguments**:
 - `floorplan`: Path to floorplan file (PNG, JPG, JPEG, or DXF)
-- `--agents, -a`: Number of agents (default: from config)
-- `--duration, -d`: Simulation duration in seconds (default: from config)
-- `--scale, -s`: Scale in pixels/units per meter (default: auto-detect)
-- `--config, -c`: Path to custom YAML configuration file (default: `config.yaml`)
-- `--batch`: Run in batch mode without visualization
-- `--analyze`: Analyze floorplan only, don't run simulation
+- `--config`: Path to custom YAML configuration file (default: `config.yaml`)
+- `--scale`: Scale in pixels/units per meter (default: auto-detect)
+- `--agents`: Number of agents (default: from config)
+- `--duration`: Simulation duration in seconds (default: from config)
+- `--no-viz`: Disable visualization (faster)
+- `--batch`: Run in batch mode without interactive prompts
 
 ### Floorplan Analysis Only
 
-Analyze a floorplan without running simulation:
+Analyze a floorplan without running a simulation:
 ```bash
 python analyze_floorplan_yolo.py path/to/floorplan.jpg
-```
-
-Or use the main script:
-```bash
-python main.py path/to/floorplan.jpg --analyze
 ```
 
 ## ⚙️ Configuration
@@ -168,7 +161,6 @@ agents:
   speed_range: [0.8, 1.8]      # Min/max speed (m/s)
   radius_range: [0.2, 0.4]     # Agent size range (meters)
   panic_threshold: 0.3         # Panic activation threshold
-  panic_spread_rate: 0.1       # How fast panic spreads
 ```
 
 ### Motion Models
@@ -183,7 +175,6 @@ motion:
     time_horizon: 2.0
     neighbor_dist: 5.0
   pathfinding:
-    algorithm: "astar"
     congestion_weight: 0.3
 ```
 
@@ -208,9 +199,6 @@ hazards:
 visualization:
   enabled: true
   fps: 30
-  video_export: true
-  video_path: "output/simulation.mp4"
-  heatmap_export: true
   show_trajectories: true
 ```
 
@@ -222,7 +210,7 @@ tragic/
 ├── analyze_floorplan_yolo.py        # Standalone floorplan analyzer
 ├── config.yaml                      # Configuration file
 ├── requirements.txt                 # Python dependencies
-├── yolov8n.pt                      # YOLOv8 model weights
+├── yolov8n.pt                       # YOLOv8 model weights
 ├── README.md                        # This file
 │
 ├── src/                             # Core source modules
@@ -234,15 +222,14 @@ tragic/
 │   ├── hazard_manager.py            # Fire, smoke, and hazards
 │   ├── motion_models.py             # SFM, RVO, pathfinding
 │   ├── simulation_engine.py         # Main simulation loop
-│   └── visualizer.py                # Rendering and video export
+│   └── visualizer.py                # Rendering and heatmap export
 │
 └── output/                          # Generated outputs
-    ├── simulation.mp4               # Simulation video
-    ├── floorplan_analytics.csv      # Analytics data
+    ├── analytics.csv                # Analytics data (path configurable)
+    ├── agent_paths.png              # Agent movement paths
     └── heatmaps/                    # Generated heatmap images
         ├── density_heatmap.png
-        ├── panic_heatmap.png
-        └── evacuation_flow.png
+        └── panic_heatmap.png
 ```
 
 ## 🔧 Core Components
@@ -280,14 +267,12 @@ tragic/
 ### 6. Floorplan Parser (`src/floorplan_parser.py`)
 - DXF file parsing with `ezdxf`
 - Image processing with PIL/OpenCV
-- YOLOv8 integration for object detection
 - Automatic scale detection and calibration
 
 ### 7. Visualizer (`src/visualizer.py`)
-- Real-time matplotlib animation
+- Real-time matplotlib rendering
 - Agent trail rendering
 - Hazard overlay visualization
-- Video encoding with FFmpeg
 - Heatmap generation
 
 ### 8. Analytics (`src/analytics.py`)
@@ -300,26 +285,21 @@ tragic/
 
 After running a simulation, you'll find:
 
-### 1. **Simulation Video** (`output/simulation.mp4`)
-- Full animation of the simulation
-- Shows agent movement, panic levels, and hazards
-- Configurable FPS and quality
-
-### 2. **Analytics CSV** (`output/floorplan_analytics.csv`)
+### 1. **Analytics CSV** (`output/analytics.csv`)
 Columns include:
-- `time`: Simulation timestamp
-- `total_agents`: Current agent count
-- `evacuated`: Number of evacuated agents
-- `casualties`: Number of casualties
-- `avg_panic`: Average panic level
-- `fire_cells`: Number of cells on fire
-- `smoke_cells`: Number of cells with smoke
-- And more...
+- `Time`: Simulation timestamp
+- `Active_Agents`: Current agent count
+- `Evacuated`: Number of evacuated agents
+- `Deceased`: Number of casualties
+- `Avg_Panic`: Average panic level
+- `Avg_Speed`: Average agent speed
 
-### 3. **Heatmaps** (`output/heatmaps/`)
+### 2. **Heatmaps** (`output/heatmaps/`)
 - `density_heatmap.png`: Agent density over time
 - `panic_heatmap.png`: Panic level distribution
-- `evacuation_flow.png`: Flow patterns toward exits
+
+### 3. **Agent Paths** (`output/agent_paths.png`)
+- Combined visualization of all agent trajectories
 
 ## 🧪 Example Workflows
 
@@ -330,7 +310,7 @@ python main.py
 
 # Check output
 ls -lh output/
-cat output/floorplan_analytics.csv
+cat output/analytics.csv
 ```
 
 ### Workflow 2: Custom Building Analysis
@@ -339,7 +319,6 @@ cat output/floorplan_analytics.csv
 python main.py my_building.jpg --agents 1000 --duration 600
 
 # View results
-open output/simulation.mp4
 open output/heatmaps/density_heatmap.png
 ```
 
@@ -348,7 +327,7 @@ open output/heatmaps/density_heatmap.png
 # Run multiple scenarios without visualization
 for agents in 100 500 1000; do
     python main.py building.jpg --agents $agents --batch
-    mv output/floorplan_analytics.csv output/analytics_${agents}.csv
+    mv output/analytics.csv output/analytics_${agents}.csv
 done
 ```
 
@@ -433,18 +412,8 @@ pip install ezdxf
 **Solutions**:
 - Reduce agent count: `--agents 100`
 - Increase time step in `config.yaml`: `time_step: 0.2`
-- Disable visualization: `--batch`
+- Disable visualization: `--no-viz`
 - Use lower resolution: `grid_resolution: 1.0`
-
-### Issue: No video output generated
-**Solution**: Check FFmpeg installation:
-```bash
-# macOS
-brew install ffmpeg
-
-# Linux
-sudo apt-get install ffmpeg
-```
 
 ## 🔬 Research Applications
 

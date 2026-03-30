@@ -2,7 +2,7 @@
 
 simulation:
   duration: 300.0  # seconds
-  time_step: 0.1   # seconds
+  time_step: 1  # seconds
   seed: 42         # random seed for reproducibility
 
 environment:
@@ -16,15 +16,11 @@ agents:
   radius_range: [0.2, 0.4]  # meters
   visibility_range: [3.0, 15.0]  # meters
   panic_threshold: 0.3
-  panic_spread_radius: 5.0
-  panic_spread_rate: 0.1
-  max_panic_level: 1.0
 
 motion:
   model: "hybrid"  # Options: "sfm", "rvo", "pathfinding", "hybrid"
   sfm:
     relaxation_time: 0.5
-    desired_speed_factor: 1.0
     agent_strength: 2000.0
     agent_range: 0.08
     wall_strength: 2000.0
@@ -35,7 +31,6 @@ motion:
     neighbor_dist: 5.0
     max_neighbors: 10
   pathfinding:
-    algorithm: "astar"  # A* algorithm
     replan_interval: 1.0  # seconds
     congestion_weight: 0.3
     hazard_weight: 0.5
@@ -73,23 +68,12 @@ obstacles:
     - [20.0, 20.0, 10.0, 10.0]
     - [15.0, 35.0, 5.0, 5.0]
 
-floorplan:
-  type: "none"  # Options: "none", "dxf", "image"
-  file_path: null
-  scale: 1.0  # pixels or units per meter
-  origin: [0, 0]
-
 visualization:
   enabled: true
   fps: 30
-  realtime: false
   show_trajectories: true
   show_panic_levels: true
   show_hazards: true
-  video_export: true
-  video_path: "output/simulation.mp4"
-  heatmap_export: true
-  heatmap_path: "output/heatmaps"
   # Trail/path visualization settings
   trail_length: 50  # Number of position points to show in agent trails
   show_all_trails: true  # Show trails for all agents (vs subset)
@@ -105,4 +89,3 @@ analytics:
 
 output:
   directory: "output"
-  save_final_state: true

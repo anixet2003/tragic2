@@ -7,7 +7,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
-from matplotlib.patches import Rectangle, Circle, Polygon
+from matplotlib.patches import Rectangle, Circle
 import cv2
 
 try:
