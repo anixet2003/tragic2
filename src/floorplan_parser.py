@@ -32,15 +32,19 @@ class MapMeta:
     """Coordinate transformation manager."""
     
     def __init__(self, scale: float = 1.0, origin: Tuple[float, float] = (0, 0), 
-                 rotation: float = 0.0):
+                 rotation: float = 0.0, flip_y: bool = False):
         self.scale = scale  # pixels or DXF units per meter
         self.origin = np.array(origin, dtype=float)
         self.rotation = rotation  # radians
+        self.flip_y = flip_y
     
     def to_world(self, point: np.ndarray) -> np.ndarray:
         """Convert from file coordinates to world coordinates."""
         # Translate
         p = point - self.origin
+        # Flip Y to convert from image coordinates (top-left origin)
+        if self.flip_y:
+            p[1] = -p[1]
         # Rotate
         if self.rotation != 0:
             cos_r = np.cos(self.rotation)
@@ -60,6 +64,9 @@ class MapMeta:
             sin_r = np.sin(-self.rotation)
             rot_matrix = np.array([[cos_r, -sin_r], [sin_r, cos_r]])
             p = rot_matrix @ p
+        # Flip Y back to image coordinates
+        if self.flip_y:
+            p[1] = -p[1]
         # Translate
         return p + self.origin
 
@@ -197,6 +204,7 @@ class ImageParser:
         self.image = np.array(img.convert('RGB'))
         
         height, width = self.image.shape[:2]
+        self.meta = MapMeta(scale=self.scale, origin=(0, height), flip_y=True)
         print(f"  Analyzing {width}×{height} image...")
         
         # Convert to grayscale for analysis

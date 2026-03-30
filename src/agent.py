@@ -4,7 +4,7 @@ Each agent represents an individual person with autonomous behavior
 """
 
 import numpy as np
-from typing import Tuple, List, Optional
+from typing import List, Optional
 
 
 class Agent:

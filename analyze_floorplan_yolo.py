@@ -11,18 +11,8 @@ from matplotlib.patches import Rectangle, Circle
 import cv2
 
 try:
-    from PIL import Image
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-    print("Error: Pillow is required. Install with: pip install Pillow")
-    sys.exit(1)
-
-try:
     from ultralytics import YOLO
-    YOLO_AVAILABLE = True
 except ImportError:
-    YOLO_AVAILABLE = False
     print("Error: Ultralytics (YOLOv8) is required. Install with: pip install ultralytics")
     sys.exit(1)
 
