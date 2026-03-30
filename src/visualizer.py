@@ -194,7 +194,7 @@ class Visualizer:
             stats_text += f"\nAvg Panic: {analytics.avg_panic_levels[-1]:.2f}"
         
         self.ax.text(
-            0.02, 0.98,
+            1.02, 0.98,
             stats_text,
             transform=self.ax.transAxes,
             verticalalignment='top',
@@ -226,11 +226,11 @@ class Visualizer:
             # Create manual legend instead of colorbar
             legend_text = "Panic Level:\nLow (Green)\nMedium (Yellow)\nHigh (Red)"
             self.ax.text(
-                0.98, 0.85,
+                1.02, 0.70,
                 legend_text,
                 transform=self.ax.transAxes,
                 verticalalignment='top',
-                horizontalalignment='right',
+                horizontalalignment='left',
                 bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8),
                 fontsize=9
             )
