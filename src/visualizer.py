@@ -271,7 +271,7 @@ class Visualizer:
                 # Calculate scale to match simulation coordinates
                 img_array = np.array(img)
                 extent = [0, self.environment.width, 0, self.environment.height]
-                ax.imshow(img_array, extent=extent, origin='lower', alpha=0.3, aspect='auto')
+                ax.imshow(img_array, extent=extent, origin='upper', alpha=0.3, aspect='auto')
             except Exception as e:
                 print(f"  Warning: Could not load floorplan image: {e}")
         
