@@ -36,6 +36,8 @@ TRAGIC is a comprehensive simulation framework designed to:
 - **Real-time Visualization**: Animated simulation with agent trails and hazard overlays
 - **Heatmap Generation**: Density, panic, and evacuation flow heatmaps
 - **Statistical Analysis**: CSV export with time-series data on evacuations, casualties, and panic levels
+- **Automatic Improvement Suggestions**: Post-simulation markdown report with prioritized floor-plan change recommendations
+- **Color-Coded Improvement Overlay**: Generated image marking recommended changes directly on the floor plan
 
 ## 🚀 Getting Started
 
@@ -94,6 +96,14 @@ Run a simulation with default configuration:
 ```bash
 python main.py
 ```
+
+After the simulation ends, TRAGIC now automatically generates:
+- `floorplan_analytics.csv` (time-series metrics)
+- `agent_paths.png` (movement paths)
+- `heatmaps/density_heatmap.png`
+- `heatmaps/panic_heatmap.png`
+- `floorplan_improvement_suggestions.md` (structured recommendations)
+- `floorplan_improvement_overlay.png` (color-coded recommendations mapped on the floor plan)
 
 ### Floorplan-Based Simulation
 
@@ -227,10 +237,27 @@ tragic/
 └── output/                          # Generated outputs
     ├── analytics.csv                # Analytics data (path configurable)
     ├── agent_paths.png              # Agent movement paths
+  ├── floorplan_improvement_suggestions.md  # Auto-generated improvement recommendations
+  ├── floorplan_improvement_overlay.png     # Color-coded improvement map on floor plan
     └── heatmaps/                    # Generated heatmap images
         ├── density_heatmap.png
         └── panic_heatmap.png
 ```
+
+## 🖥️ Streamlit Dashboard
+
+Launch the dashboard:
+
+```bash
+python ui_runner.py
+```
+
+After each completed run, the **Latest Outputs** section shows:
+- Analytics CSV preview
+- Density and panic heatmaps
+- Agent movement paths image
+- Auto-generated floor-plan improvement markdown report
+- Color-coded floor-plan improvement overlay image
 
 ## 🔧 Core Components
 
