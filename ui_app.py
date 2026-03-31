@@ -202,6 +202,12 @@ def read_csv_rows(csv_path: Path, max_rows: int = 200) -> list:
 	return [dict(zip(headers, row)) for row in data_rows]
 
 
+def read_text_file(path: Path) -> Optional[str]:
+	if not path.exists():
+		return None
+	return path.read_text(encoding="utf-8")
+
+
 def parse_config_with_error(config_text: str) -> Tuple[Optional[dict], Optional[str]]:
 	try:
 		parsed = yaml.safe_load(config_text)
@@ -450,6 +456,20 @@ def main() -> None:
 			st.image(str(agent_paths), caption="Agent movement paths", use_container_width=True)
 		else:
 			st.caption("Agent paths image not available.")
+
+		st.markdown("### Floor Plan Improvement Suggestions")
+		report_path = output_dir / "floorplan_improvement_suggestions.md"
+		report_text = read_text_file(report_path)
+		if report_text:
+			st.markdown(report_text)
+			st.download_button(
+				"Download suggestions report",
+				data=report_text,
+				file_name="floorplan_improvement_suggestions.md",
+				mime="text/markdown",
+			)
+		else:
+			st.info("No improvement suggestions report found yet.")
 
 
 if __name__ == "__main__":
