@@ -14,6 +14,7 @@ from .motion_models import MotionController
 from .hazard_manager import HazardManager
 from .analytics import AnalyticsCollector
 from .visualizer import Visualizer
+from .egress_advisor import EgressAdvisor
 
 
 class SimulationEngine:
@@ -317,6 +318,10 @@ class SimulationEngine:
         output_dir = Path(self.config.get("output", {}).get("directory", "output"))
         (output_dir / "heatmaps").mkdir(parents=True, exist_ok=True)
 
+        density_heatmap_path = output_dir / 'heatmaps' / 'density_heatmap.png'
+        panic_heatmap_path = output_dir / 'heatmaps' / 'panic_heatmap.png'
+        agent_paths_path = output_dir / 'agent_paths.png'
+
         # Generate heatmaps
         if self.analytics.compute_heatmaps:
             density_heatmap = self.analytics.generate_heatmap('density')
@@ -324,7 +329,7 @@ class SimulationEngine:
                 self.visualizer.export_heatmap(
                     density_heatmap,
                     'Agent Density Heatmap',
-                    str(output_dir / 'heatmaps' / 'density_heatmap.png')
+                    str(density_heatmap_path)
                 )
             
             panic_heatmap = self.analytics.generate_heatmap('panic')
@@ -332,16 +337,34 @@ class SimulationEngine:
                 self.visualizer.export_heatmap(
                     panic_heatmap,
                     'Panic Level Heatmap',
-                    str(output_dir / 'heatmaps' / 'panic_heatmap.png')
+                    str(panic_heatmap_path)
                 )
         
         # Export agent movement paths visualization
         print("\nGenerating agent movement paths visualization...")
         self.visualizer.export_movement_paths(
             self.agents,
-            str(output_dir / 'agent_paths.png'),
+            str(agent_paths_path),
             floorplan_path=self.floorplan_path
         )
+
+        # Generate automatic floor-plan improvement suggestions report
+        print("\nGenerating floor-plan improvement suggestions report...")
+        report_path = output_dir / 'floorplan_improvement_suggestions.md'
+        try:
+            advisor = EgressAdvisor(
+                environment=self.environment,
+                analytics=self.analytics,
+                agents=self.agents,
+                movement_img_path=agent_paths_path,
+                density_img_path=density_heatmap_path,
+                panic_img_path=panic_heatmap_path,
+                csv_path=Path(self.analytics.csv_path),
+            )
+            generated_report = advisor.generate(report_path)
+            print(f"✓ Saved improvement suggestions report to: {generated_report}")
+        except Exception as exc:
+            print(f"Warning: Failed to generate improvement suggestions report: {exc}")
         
         # Close visualizer
         self.visualizer.close()
@@ -349,4 +372,5 @@ class SimulationEngine:
         print("\n" + "=" * 60)
         print("All outputs generated successfully!")
         print(f"Check '{output_dir / 'agent_paths.png'}' to see how agents moved to exits!")
+        print(f"Check '{report_path}' for automated floor-plan improvement suggestions.")
         print("=" * 60)
