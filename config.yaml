@@ -2,22 +2,25 @@ simulation:
   duration: 300.0
   time_step: 1
   seed: 42
+
 environment:
   width: 50.0
   height: 50.0
   grid_resolution: 0.5
+
 agents:
   count: 500
   speed_range:
-  - 0.8
-  - 1.8
+    - 0.8
+    - 1.8
   radius_range:
-  - 0.2
-  - 0.4
+    - 0.2
+    - 0.4
   visibility_range:
-  - 3.0
-  - 15.0
+    - 3.0
+    - 15.0
   panic_threshold: 0.3
+
 motion:
   model: hybrid
   sfm:
@@ -35,13 +38,14 @@ motion:
     replan_interval: 1.0
     congestion_weight: 0.3
     hazard_weight: 0.5
+
 hazards:
   fire:
     enabled: true
     start_time: 30.0
     ignition_points:
-    - - 25.0
-      - 25.0
+      - - 25.0
+        - 25.0
     spread_rate: 0.05
     damage_rate: 0.1
     growth_rate: 1.5
@@ -53,41 +57,44 @@ hazards:
   exit_failures:
     enabled: true
     failure_times:
-    - 60.0
-    - 120.0
+      - 60.0
+      - 120.0
     failure_exits:
-    - 1
-    - 2
+      - 1
+      - 2
+
 exits:
   positions:
-  - - 5.0
-    - 5.0
-  - - 45.0
-    - 5.0
-  - - 5.0
-    - 45.0
-  - - 45.0
-    - 45.0
+    - - 5.0
+      - 5.0
+    - - 45.0
+      - 5.0
+    - - 5.0
+      - 45.0
+    - - 45.0
+      - 45.0
   widths:
-  - 2.0
-  - 2.0
-  - 2.0
-  - 2.0
+    - 2.0
+    - 2.0
+    - 2.0
+    - 2.0
   capacities:
-  - 100
-  - 100
-  - 100
-  - 100
+    - 100
+    - 100
+    - 100
+    - 100
+
 obstacles:
   rectangles:
-  - - 20.0
-    - 20.0
-    - 10.0
-    - 10.0
-  - - 15.0
-    - 35.0
-    - 5.0
-    - 5.0
+    - - 20.0
+      - 20.0
+      - 10.0
+      - 10.0
+    - - 15.0
+      - 35.0
+      - 5.0
+      - 5.0
+
 visualization:
   enabled: true
   fps: 30
@@ -97,6 +104,7 @@ visualization:
   trail_length: 50
   show_all_trails: true
   trail_alpha: 0.6
+
 analytics:
   enabled: true
   sampling_rate: 0.5
@@ -104,5 +112,6 @@ analytics:
   csv_path: output/analytics.csv
   compute_heatmaps: true
   bottleneck_threshold: 4.0
+
 output:
   directory: output
