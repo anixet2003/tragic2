@@ -4,6 +4,7 @@ Command-line interface for running simulations
 """
 
 import sys
+import os
 import yaml
 import argparse
 from pathlib import Path
@@ -28,6 +29,30 @@ def load_config(config_path: str) -> dict:
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     return config
+
+
+def apply_streamlit_overrides(config: dict) -> None:
+    output_dir = os.getenv("TRAGIC_OUTPUT_DIR")
+    frame_output = os.getenv("TRAGIC_FRAME_OUTPUT")
+    frame_stride = os.getenv("TRAGIC_FRAME_STRIDE")
+
+    if output_dir:
+        config.setdefault("output", {})
+        config["output"]["directory"] = output_dir
+        config.setdefault("analytics", {})
+        config["analytics"]["csv_path"] = str(Path(output_dir) / "floorplan_analytics.csv")
+
+    if frame_output:
+        config.setdefault("visualization", {})
+        config["visualization"]["enabled"] = True
+        config["visualization"]["show_live_window"] = False
+        config["visualization"]["capture_frames"] = True
+        config["visualization"]["frame_output_path"] = frame_output
+        if frame_stride:
+            try:
+                config["visualization"]["frame_stride"] = max(1, int(frame_stride))
+            except ValueError:
+                config["visualization"]["frame_stride"] = 1
 
 
 def detect_floorplan_type(filepath: str) -> str:
@@ -316,6 +341,11 @@ def main():
         help='Simulation duration in seconds (will be prompted if not specified)'
     )
     parser.add_argument(
+        '--time-step',
+        type=float,
+        help='Simulation time step in seconds'
+    )
+    parser.add_argument(
         '--no-viz',
         action='store_true',
         help='Disable visualization (faster)'
@@ -361,6 +391,11 @@ def main():
     
     if args.no_viz:
         config['visualization']['enabled'] = False
+
+    if args.time_step:
+        config['simulation']['time_step'] = args.time_step
+
+    apply_streamlit_overrides(config)
     
     # Create output directory
     output_dir = Path(config['output']['directory'])

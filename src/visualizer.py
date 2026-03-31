@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Circle
 import matplotlib.cm as cm
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 class Visualizer:
@@ -22,6 +22,10 @@ class Visualizer:
         self.show_trajectories = config.get('show_trajectories', True)
         self.show_panic_levels = config.get('show_panic_levels', True)
         self.show_hazards = config.get('show_hazards', True)
+        self.show_live_window = config.get('show_live_window', True)
+        self.capture_frames = config.get('capture_frames', False)
+        self.frame_output_path = config.get('frame_output_path', '')
+        self.frame_stride = max(1, int(config.get('frame_stride', 1)))
         
         # Trail configuration
         self.trail_length = config.get('trail_length', 50)  # Number of positions to show in trail
@@ -32,10 +36,17 @@ class Visualizer:
         
         # Setup figure with non-interactive backend to avoid GUI issues
         if self.enabled:
-            plt.ion()  # Interactive mode
+            if self.capture_frames and not self.show_live_window:
+                plt.switch_backend('Agg')
+                plt.ioff()
+            else:
+                plt.ion()  # Interactive mode
             self.fig, self.ax = plt.subplots(figsize=(14, 10))
             self.fig.canvas.toolbar_visible = False  # Hide toolbar to avoid tkinter issues
             self.setup_plot()
+
+        if self.capture_frames and self.frame_output_path:
+            Path(self.frame_output_path).parent.mkdir(parents=True, exist_ok=True)
             
     
     def setup_plot(self):
@@ -61,7 +72,7 @@ class Visualizer:
             self.ax.add_patch(rect)
     
     def render_frame(self, agents: List, hazard_manager, current_time: float, 
-                    analytics=None, show: bool = True):
+                    analytics=None, show: Optional[bool] = None, frame_index: Optional[int] = None):
         """
         Render a single frame.
         
@@ -70,10 +81,14 @@ class Visualizer:
             hazard_manager: HazardManager instance
             current_time: Current simulation time
             analytics: Optional AnalyticsCollector
-            show: Whether to display the frame
+            show: Whether to display the frame (defaults to show_live_window)
+            frame_index: Optional frame counter for capture timing
         """
         if not self.enabled:
             return
+
+        if show is None:
+            show = self.show_live_window
         
         # Clear previous frame (except obstacles and exits)
         self.ax.clear()
@@ -235,9 +250,19 @@ class Visualizer:
                 fontsize=9
             )
         
+        if self.capture_frames and self.frame_output_path and frame_index is not None:
+            if frame_index % self.frame_stride == 0:
+                self._save_frame_snapshot()
+
         if show:
             plt.draw()
             plt.pause(0.001)
+
+    def _save_frame_snapshot(self):
+        """Save the current frame to a file for live preview."""
+        if not self.frame_output_path:
+            return
+        self.fig.savefig(self.frame_output_path, dpi=120, bbox_inches='tight')
     
     
     def export_movement_paths(self, agents: List, filename: str = 'output/agent_paths.png', floorplan_path: str = None):

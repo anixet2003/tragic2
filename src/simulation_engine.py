@@ -6,6 +6,7 @@ Main time-stepping loop and coordination
 import numpy as np
 from typing import List
 import time
+from pathlib import Path
 
 from .agent import Agent
 from .environment import Environment, Exit, Obstacle
@@ -182,7 +183,8 @@ class SimulationEngine:
                     self.hazard_manager,
                     self.current_time,
                     self.analytics,
-                    show=True
+                    show=self.visualizer.show_live_window,
+                    frame_index=frame_count
                 )
             
             frame_count += 1
@@ -328,6 +330,9 @@ class SimulationEngine:
         self.analytics.export_to_csv()
         print(f"\nTime series data exported to {self.analytics.csv_path}")
         
+        output_dir = Path(self.config.get("output", {}).get("directory", "output"))
+        (output_dir / "heatmaps").mkdir(parents=True, exist_ok=True)
+
         # Generate heatmaps
         if self.analytics.compute_heatmaps:
             density_heatmap = self.analytics.generate_heatmap('density')
@@ -335,7 +340,7 @@ class SimulationEngine:
                 self.visualizer.export_heatmap(
                     density_heatmap,
                     'Agent Density Heatmap',
-                    'output/heatmaps/density_heatmap.png'
+                    str(output_dir / 'heatmaps' / 'density_heatmap.png')
                 )
             
             panic_heatmap = self.analytics.generate_heatmap('panic')
@@ -343,14 +348,14 @@ class SimulationEngine:
                 self.visualizer.export_heatmap(
                     panic_heatmap,
                     'Panic Level Heatmap',
-                    'output/heatmaps/panic_heatmap.png'
+                    str(output_dir / 'heatmaps' / 'panic_heatmap.png')
                 )
         
         # Export agent movement paths visualization
         print("\nGenerating agent movement paths visualization...")
         self.visualizer.export_movement_paths(
             self.agents,
-            'output/agent_paths.png',
+            str(output_dir / 'agent_paths.png'),
             floorplan_path=self.floorplan_path
         )
         
@@ -359,5 +364,5 @@ class SimulationEngine:
         
         print("\n" + "=" * 60)
         print("All outputs generated successfully!")
-        print("Check 'output/agent_paths.png' to see how agents moved to exits!")
+        print(f"Check '{output_dir / 'agent_paths.png'}' to see how agents moved to exits!")
         print("=" * 60)
