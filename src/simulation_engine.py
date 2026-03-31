@@ -361,8 +361,12 @@ class SimulationEngine:
                 panic_img_path=panic_heatmap_path,
                 csv_path=Path(self.analytics.csv_path),
             )
-            generated_report = advisor.generate(report_path)
+            generated_report = advisor.generate(
+                report_path,
+                floorplan_path=Path(self.floorplan_path) if self.floorplan_path else None,
+            )
             print(f"✓ Saved improvement suggestions report to: {generated_report}")
+            print(f"✓ Saved improvement overlay to: {output_dir / 'floorplan_improvement_overlay.png'}")
         except Exception as exc:
             print(f"Warning: Failed to generate improvement suggestions report: {exc}")
         
@@ -373,4 +377,5 @@ class SimulationEngine:
         print("All outputs generated successfully!")
         print(f"Check '{output_dir / 'agent_paths.png'}' to see how agents moved to exits!")
         print(f"Check '{report_path}' for automated floor-plan improvement suggestions.")
+        print(f"Check '{output_dir / 'floorplan_improvement_overlay.png'}' for visual improvement markers.")
         print("=" * 60)

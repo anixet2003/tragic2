@@ -11,6 +11,14 @@ from typing import Dict, List, Optional, Sequence, Tuple
 import csv
 
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
+
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except Exception:
+    PIL_AVAILABLE = False
 
 
 @dataclass
@@ -21,6 +29,18 @@ class PhaseSummary:
     tail_start_time: float
     plateau_time: float
     peak_rate: float
+
+
+@dataclass
+class ImprovementMarker:
+    marker_id: int
+    x: float
+    y: float
+    category: str
+    color: str
+    title: str
+    action: str
+    impact: str
 
 
 class EgressAdvisor:
@@ -220,7 +240,220 @@ class EgressAdvisor:
     def _format_xy(self, x: float, y: float) -> str:
         return f"x≈{x:.1f}, y≈{y:.1f}"
 
-    def _build_report(self) -> str:
+    def _build_improvement_markers(
+        self,
+        density_points: List[Tuple[float, float, float]],
+        panic_points: List[Tuple[float, float, float]],
+        exit_stats: Dict[str, object],
+    ) -> List[ImprovementMarker]:
+        markers: List[ImprovementMarker] = []
+
+        marker_id = 1
+        if density_points:
+            x, y, _ = density_points[0]
+            markers.append(
+                ImprovementMarker(
+                    marker_id=marker_id,
+                    x=x,
+                    y=y,
+                    category="Capacity",
+                    color="#d62728",
+                    title="Widen Choke Zone",
+                    action="Increase opening/corridor width by 1.0-1.5m and clear near obstructions",
+                    impact="High",
+                )
+            )
+            marker_id += 1
+
+        overloaded = exit_stats.get("overloaded")
+        underused = exit_stats.get("underused")
+        if overloaded is not None and underused is not None:
+            ux = float(underused.position[0])
+            uy = float(underused.position[1])
+            markers.append(
+                ImprovementMarker(
+                    marker_id=marker_id,
+                    x=ux,
+                    y=uy,
+                    category="Exit Balance",
+                    color="#1f77b4",
+                    title="Route Rebalance",
+                    action="Add feeder opening/signage to increase utilization of this exit",
+                    impact="High",
+                )
+            )
+            marker_id += 1
+
+        if panic_points:
+            px, py, _ = panic_points[0]
+        elif density_points:
+            px, py, _ = density_points[0]
+        else:
+            px, py = self.environment.width * 0.5, self.environment.height * 0.5
+
+        markers.append(
+            ImprovementMarker(
+                marker_id=marker_id,
+                x=px,
+                y=py,
+                category="Flow Geometry",
+                color="#ff7f0e",
+                title="Smooth Turn/Merge",
+                action="Replace sharp turn with gentler transition and remove corner clutter",
+                impact="Medium-High",
+            )
+        )
+        marker_id += 1
+
+        if len(density_points) > 1:
+            x2, y2, _ = density_points[1]
+            markers.append(
+                ImprovementMarker(
+                    marker_id=marker_id,
+                    x=x2,
+                    y=y2,
+                    category="Operations",
+                    color="#2ca02c",
+                    title="One-Way Control",
+                    action="Enforce one-way routing at merge to reduce crossing conflicts",
+                    impact="Medium",
+                )
+            )
+            marker_id += 1
+
+        if len(density_points) > 2:
+            x3, y3, _ = density_points[2]
+            markers.append(
+                ImprovementMarker(
+                    marker_id=marker_id,
+                    x=x3,
+                    y=y3,
+                    category="Obstacle Cleanup",
+                    color="#9467bd",
+                    title="Remove Small Obstructions",
+                    action="Relocate minor internal obstructions within 3-5m of hotspot",
+                    impact="Medium",
+                )
+            )
+
+        return markers
+
+    def _draw_base_floorplan(self, ax, floorplan_path: Optional[Path]) -> None:
+        if floorplan_path is not None and floorplan_path.exists() and PIL_AVAILABLE:
+            try:
+                img = Image.open(floorplan_path)
+                img_array = np.array(img)
+                extent = [0, self.environment.width, 0, self.environment.height]
+                ax.imshow(img_array, extent=extent, origin="upper", alpha=0.88, aspect="auto")
+                return
+            except Exception:
+                pass
+
+        # Fallback: use movement image as background if original floorplan not available.
+        if self.movement_img_path.exists() and PIL_AVAILABLE:
+            try:
+                img = Image.open(self.movement_img_path)
+                img_array = np.array(img)
+                extent = [0, self.environment.width, 0, self.environment.height]
+                ax.imshow(img_array, extent=extent, origin="upper", alpha=0.82, aspect="auto")
+                return
+            except Exception:
+                pass
+
+        # Last fallback: draw obstacles and exits on a plain canvas.
+        for obstacle in self.environment.obstacles:
+            ax.fill(
+                [obstacle.x, obstacle.x + obstacle.width, obstacle.x + obstacle.width, obstacle.x],
+                [obstacle.y, obstacle.y, obstacle.y + obstacle.height, obstacle.y + obstacle.height],
+                color="#606060",
+                alpha=0.55,
+                linewidth=0,
+            )
+        for exit_obj in self.environment.exits:
+            exit_circle = Circle((float(exit_obj.position[0]), float(exit_obj.position[1])), radius=max(0.6, exit_obj.width / 2), color="#32cd32", alpha=0.8)
+            ax.add_patch(exit_circle)
+
+    def _generate_overlay_image(
+        self,
+        markers: List[ImprovementMarker],
+        output_path: Path,
+        floorplan_path: Optional[Path],
+    ) -> Optional[Path]:
+        if not markers:
+            return None
+
+        fig, ax = plt.subplots(figsize=(14, 10))
+        ax.set_xlim(0, self.environment.width)
+        ax.set_ylim(0, self.environment.height)
+        ax.set_aspect("equal")
+        ax.set_xlabel("X (meters)")
+        ax.set_ylabel("Y (meters)")
+        ax.set_title("Floor Plan Improvement Overlay (Color-Coded)", fontsize=14, fontweight="bold")
+
+        self._draw_base_floorplan(ax, floorplan_path=floorplan_path)
+
+        # Draw markers and callouts.
+        text_shift_x = max(1.0, self.environment.width * 0.04)
+        text_shift_y = max(1.0, self.environment.height * 0.04)
+
+        for i, marker in enumerate(markers):
+            mx, my = float(marker.x), float(marker.y)
+
+            ax.scatter([mx], [my], s=140, c=marker.color, edgecolors="black", linewidths=1.2, zorder=6)
+            ax.text(
+                mx,
+                my,
+                str(marker.marker_id),
+                color="white",
+                fontsize=9,
+                fontweight="bold",
+                ha="center",
+                va="center",
+                zorder=7,
+            )
+
+            direction = -1 if i % 2 else 1
+            tx = np.clip(mx + direction * text_shift_x, 0.5, self.environment.width - 0.5)
+            ty = np.clip(my + text_shift_y, 0.5, self.environment.height - 0.5)
+
+            callout = f"{marker.marker_id}. {marker.title}\nImpact: {marker.impact}"
+            ax.annotate(
+                callout,
+                xy=(mx, my),
+                xytext=(tx, ty),
+                fontsize=8,
+                color="black",
+                bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor=marker.color, alpha=0.88),
+                arrowprops=dict(arrowstyle="->", color=marker.color, lw=1.4),
+                zorder=8,
+            )
+
+        legend_text = "\n".join([
+            "Color Code:",
+            "Red: Capacity/widening",
+            "Blue: Exit load balancing",
+            "Orange: Turn/merge geometry",
+            "Green: One-way operations",
+            "Purple: Obstacle cleanup",
+        ])
+        ax.text(
+            1.01,
+            0.98,
+            legend_text,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=9,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.88),
+        )
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.tight_layout()
+        fig.savefig(output_path, dpi=180, bbox_inches="tight")
+        plt.close(fig)
+        return output_path
+
+    def _build_report(self) -> Tuple[str, List[ImprovementMarker]]:
         total_agents = len(self.agents)
         total_evac = int(np.sum([1 for a in self.agents if a.evacuated]))
         total_dead = int(np.sum([1 for a in self.agents if not a.alive]))
@@ -232,6 +465,7 @@ class EgressAdvisor:
 
         path_stats = self._path_efficiency_stats()
         exit_stats = self._exit_utilization()
+        markers = self._build_improvement_markers(density_points, panic_points, exit_stats)
 
         bottlenecks = self.analytics.detect_bottlenecks(self.environment.grid)
         bottlenecks = bottlenecks[:6]
@@ -373,14 +607,17 @@ class EgressAdvisor:
             report.append("E) Optional: Guidance/Policy Improvements")
             report.extend(policy_lines)
 
-        return "\n".join(report) + "\n"
+        return "\n".join(report) + "\n", markers
 
-    def generate(self, output_path: Path) -> Path:
+    def generate(self, output_path: Path, floorplan_path: Optional[Path] = None) -> Path:
         self._load_csv()
         self._extract_maps()
 
-        report_text = self._build_report()
+        report_text, markers = self._build_report()
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(report_text, encoding="utf-8")
+
+        overlay_path = output_path.parent / "floorplan_improvement_overlay.png"
+        self._generate_overlay_image(markers, overlay_path, floorplan_path=floorplan_path)
         return output_path

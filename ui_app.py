@@ -439,6 +439,7 @@ def main() -> None:
 		heatmap_density = output_dir / "heatmaps" / "density_heatmap.png"
 		heatmap_panic = output_dir / "heatmaps" / "panic_heatmap.png"
 		agent_paths = output_dir / "agent_paths.png"
+		improvement_overlay = output_dir / "floorplan_improvement_overlay.png"
 
 		cols = st.columns(2)
 		with cols[0]:
@@ -456,6 +457,15 @@ def main() -> None:
 			st.image(str(agent_paths), caption="Agent movement paths", use_container_width=True)
 		else:
 			st.caption("Agent paths image not available.")
+
+		if improvement_overlay.exists():
+			st.image(
+				str(improvement_overlay),
+				caption="Floor plan improvement overlay (color-coded)",
+				use_container_width=True,
+			)
+		else:
+			st.caption("Improvement overlay image not available.")
 
 		st.markdown("### Floor Plan Improvement Suggestions")
 		report_path = output_dir / "floorplan_improvement_suggestions.md"
