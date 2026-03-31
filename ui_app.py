@@ -202,16 +202,6 @@ def read_csv_rows(csv_path: Path, max_rows: int = 200) -> list:
 	return [dict(zip(headers, row)) for row in data_rows]
 
 
-def parse_config_text(config_text: str) -> Optional[dict]:
-	try:
-		parsed = yaml.safe_load(config_text)
-	except yaml.YAMLError:
-		return None
-	if not isinstance(parsed, dict):
-		return None
-	return parsed
-
-
 def parse_config_with_error(config_text: str) -> Tuple[Optional[dict], Optional[str]]:
 	try:
 		parsed = yaml.safe_load(config_text)

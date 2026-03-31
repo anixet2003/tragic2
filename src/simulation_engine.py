@@ -231,12 +231,6 @@ class SimulationEngine:
                 []
             )
             
-            # Debug perception for first agent
-            if agent.id == 0 and int(self.current_time * 10) % 50 == 0:
-                print(f"  [DEBUG] Agent 0 can see {len(agent.perceived_exits)} exits (total={len(exits_info)}, visibility={agent.visibility_range:.1f}m)")
-                if len(agent.perceived_exits) > 0:
-                    print(f"         Perceived exits: {[e['id'] for e in agent.perceived_exits]}")
-            
             # Select target exit if none set
             if agent.goal is None:
                 target_exit_id = agent.select_target_exit()
@@ -244,11 +238,7 @@ class SimulationEngine:
                     for exit_info in agent.perceived_exits:
                         if exit_info['id'] == target_exit_id:
                             agent.goal = exit_info['position'].copy()
-                            if agent.id == 0:
-                                print(f"  [DEBUG] Agent 0 selected exit {target_exit_id} at {agent.goal}")
                             break
-                elif agent.id == 0 and int(self.current_time * 10) % 50 == 0:
-                    print(f"  [DEBUG] Agent 0 cannot select exit (no perceived exits)")
             
             # Get nearby agents for motion computation
             neighbors = self.environment.grid.get_neighbors(
@@ -270,12 +260,6 @@ class SimulationEngine:
                 self.current_time,
                 self.dt
             )
-            
-            # Debug: Print first agent's info occasionally
-            if agent.id == 0 and int(self.current_time * 10) % 10 == 0:
-                speed = np.linalg.norm(agent.velocity)
-                goal_str = f"({agent.goal[0]:.1f},{agent.goal[1]:.1f})" if agent.goal is not None else "None"
-                print(f"  Agent 0: pos=({agent.position[0]:.1f},{agent.position[1]:.1f}), vel={speed:.2f}m/s, goal={goal_str}")
             
             # Update position
             agent.update_position(self.dt)
@@ -313,7 +297,7 @@ class SimulationEngine:
         print("\nGenerating analytics...")
         
         # Compute KPIs
-        kpis = self.analytics.compute_kpis(len(self.agents), self.current_time)
+        self.analytics.compute_kpis(len(self.agents), self.current_time)
         
         # Print summary
         print(self.analytics.generate_summary_report())

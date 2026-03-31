@@ -31,6 +31,5 @@ __all__ = [
     'SimulationEngine',
     'DXFParser',
     'ImageParser',
-    'MapMeta',
     'MapMeta'
 ]
