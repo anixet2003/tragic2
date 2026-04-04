@@ -5,6 +5,7 @@ Streamlit UI for running TRAGIC simulations.
 from __future__ import annotations
 
 import csv
+import hashlib
 import os
 import subprocess
 import sys
@@ -22,17 +23,15 @@ try:
 except Exception:
 	st_autorefresh = None
 
-from main import configure_from_floorplan, load_config
+from main import configure_from_floorplan, load_config, save_config
 from src.simulation_engine import SimulationEngine
 
 
-DEFAULT_CONFIG_PATH = Path("config.yaml")
 DEFAULT_OUTPUT_DIR = Path("output")
+GENERATED_CONFIG_DIR = Path("generated_configs")
 
 
 def load_base_config() -> dict:
-	if DEFAULT_CONFIG_PATH.exists():
-		return load_config(str(DEFAULT_CONFIG_PATH))
 	return {
 		"simulation": {"duration": 300.0, "time_step": 0.1, "seed": 42},
 		"environment": {"width": 50.0, "height": 50.0, "grid_resolution": 0.5},
@@ -109,7 +108,20 @@ def run_simulation(config: dict, output_dir: Path) -> None:
 
 
 def write_config_file(config: dict, output_path: Path) -> None:
-	output_path.write_text(yaml.safe_dump(config, sort_keys=False))
+	save_config(config, output_path)
+
+
+def build_generated_config_path(source_name: str) -> Path:
+	stem = Path(source_name).stem
+	safe_stem = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in stem).strip("_") or "floorplan"
+	digest = hashlib.sha1(source_name.encode("utf-8")).hexdigest()[:8]
+	return GENERATED_CONFIG_DIR / f"{safe_stem}_{digest}.yaml"
+
+
+def list_generated_configs() -> list[Path]:
+	if not GENERATED_CONFIG_DIR.exists():
+		return []
+	return sorted(GENERATED_CONFIG_DIR.glob("*.yaml"))
 
 
 def launch_background_simulation(
@@ -117,44 +129,11 @@ def launch_background_simulation(
 	output_dir: Path,
 	frame_path: Path,
 	frame_stride: int,
-	floorplan_path: Optional[Path],
-	scale_value: Optional[float],
-	agent_count: int,
-	duration: float,
-	time_step: float,
-	config_text: Optional[str],
-	use_overrides: bool,
-	fire_enabled: bool,
-	smoke_enabled: bool,
-	exit_failures_enabled: bool,
+	config_obj: dict,
 ) -> int:
-	command = [sys.executable, "main.py"]
-
-	if floorplan_path is not None:
-		command.append(str(floorplan_path))
-		if scale_value is not None:
-			command.extend(["--scale", str(scale_value)])
-		command.extend(["--agents", str(agent_count)])
-		command.extend(["--duration", str(duration)])
-		command.extend(["--time-step", str(time_step)])
-		command.append("--batch")
-	else:
-		config_path = output_dir / "run_config.yaml"
-		if config_text:
-			config_obj, error_message = parse_config_with_error(config_text)
-			if config_obj is None:
-				raise ValueError(error_message or "Invalid config YAML.")
-			if use_overrides:
-				apply_overrides(config_obj, int(agent_count), float(duration), float(time_step))
-				apply_hazard_toggles(config_obj, fire_enabled, smoke_enabled, exit_failures_enabled)
-			write_config_file(config_obj, config_path)
-		else:
-			config_obj = load_base_config()
-			if use_overrides:
-				apply_overrides(config_obj, int(agent_count), float(duration), float(time_step))
-				apply_hazard_toggles(config_obj, fire_enabled, smoke_enabled, exit_failures_enabled)
-			write_config_file(config_obj, config_path)
-		command.extend(["--config", str(config_path)])
+	config_path = output_dir / "run_config.yaml"
+	write_config_file(config_obj, config_path)
+	command = [sys.executable, "main.py", "--config", str(config_path), "--batch"]
 
 	child_env = dict(os.environ)
 	child_env["TRAGIC_OUTPUT_DIR"] = str(output_dir)
@@ -239,9 +218,9 @@ def main() -> None:
 
 	with st.sidebar:
 		st.header("Run Settings")
-		source_mode = st.radio("Configuration source", ["Floorplan file", "config.yaml"], index=0)
+		source_mode = st.radio("Configuration source", ["Floorplan file", "Generated config file"], index=0)
 		use_overrides = True
-		if source_mode == "config.yaml":
+		if source_mode == "Generated config file":
 			use_overrides = st.checkbox("Apply sidebar overrides", value=True)
 		agent_count = st.number_input(
 			"Agents",
@@ -285,6 +264,9 @@ def main() -> None:
 
 	floorplan_path: Optional[Path] = None
 	scale_value: Optional[float] = None
+	uploaded = None
+	selected_generated_config: Optional[Path] = None
+	generated_config_paths = list_generated_configs()
 
 	if source_mode == "Floorplan file":
 		st.subheader("Floorplan")
@@ -293,32 +275,19 @@ def main() -> None:
 		floorplan_path = write_uploaded_file(uploaded)
 		if uploaded is not None:
 			st.caption(f"Using uploaded file: {uploaded.name}")
+			predicted_cfg = build_generated_config_path(uploaded.name)
+			st.caption(f"Generated config will be saved to: {predicted_cfg}")
 	else:
-		st.subheader("Config")
-		default_yaml = yaml.safe_dump(base_config, sort_keys=False)
-		config_text = st.text_area(
-			"Edit config.yaml",
-			value=st.session_state.get("config_text", default_yaml),
-			height=360,
-		)
-		col_left, col_middle, col_right = st.columns([1, 1, 3])
-		with col_left:
-			save_config = st.button("Save config.yaml")
-		with col_middle:
-			reset_config = st.button("Reset to default")
-		if reset_config:
-			st.session_state["config_text"] = default_yaml
-			st.success("Editor reset to default config.")
-		if save_config:
-			parsed_config, error_message = parse_config_with_error(config_text)
-			if parsed_config is None:
-				st.error("Config YAML is invalid.")
-				if error_message:
-					st.code(error_message)
-			else:
-				DEFAULT_CONFIG_PATH.write_text(config_text)
-				st.session_state["config_text"] = config_text
-				st.success("config.yaml updated.")
+		st.subheader("Generated Config")
+		if generated_config_paths:
+			selected = st.selectbox(
+				"Select generated config",
+				options=[str(p) for p in generated_config_paths],
+			)
+			selected_generated_config = Path(selected)
+			st.caption("Tip: run once with a floorplan to create new generated configs.")
+		else:
+			st.info("No generated configs found yet. Run once with a floorplan to create one.")
 
 	run_clicked = st.button("Run simulation", type="primary")
 
@@ -326,29 +295,51 @@ def main() -> None:
 		if source_mode == "Floorplan file" and floorplan_path is None:
 			st.error("Please upload a floorplan file to continue.")
 			return
+		if source_mode == "Generated config file" and selected_generated_config is None:
+			st.error("Please select a generated config to continue.")
+			return
 
 		with st.spinner("Running simulation. This can take a while for large agent counts."):
 			output_dir = build_run_output_dir(DEFAULT_OUTPUT_DIR)
 			frame_path = output_dir / "live" / "frame.png"
 			ensure_output_dir(output_dir)
 
+			if source_mode == "Floorplan file":
+				config = configure_from_floorplan(
+					str(floorplan_path),
+					scale=scale_value,
+					agent_count=int(agent_count),
+					duration=float(duration),
+					batch_mode=True,
+				)
+				if config is None:
+					st.error("Failed to configure from floorplan. See logs for details.")
+					return
+				apply_overrides(config, int(agent_count), float(duration), float(time_step))
+
+				if uploaded is not None:
+					generated_cfg_path = build_generated_config_path(uploaded.name)
+				else:
+					generated_cfg_path = build_generated_config_path(floorplan_path.name)
+				write_config_file(config, generated_cfg_path)
+				st.session_state["last_generated_config"] = str(generated_cfg_path)
+			else:
+				config = load_config(str(selected_generated_config))
+				if use_overrides:
+					apply_overrides(config, int(agent_count), float(duration), float(time_step))
+
+			if use_overrides or source_mode == "Floorplan file":
+				config.setdefault("visualization", {})
+				config["visualization"]["enabled"] = bool(enable_visuals)
+				apply_hazard_toggles(config, fire_enabled, smoke_enabled, exit_failures_enabled)
+
 			if live_preview:
-				config_text = st.session_state.get("config_text") if source_mode == "config.yaml" else None
 				try:
 					pid = launch_background_simulation(
 						output_dir=output_dir,
 						frame_path=frame_path,
 						frame_stride=int(frame_stride),
-						floorplan_path=floorplan_path if source_mode == "Floorplan file" else None,
-						scale_value=scale_value,
-						agent_count=int(agent_count),
-						duration=float(duration),
-						time_step=float(time_step),
-						config_text=config_text,
-						use_overrides=use_overrides,
-						fire_enabled=fire_enabled,
-						smoke_enabled=smoke_enabled,
-						exit_failures_enabled=exit_failures_enabled,
+						config_obj=config,
 					)
 				except ValueError as exc:
 					st.error(str(exc))
@@ -359,40 +350,13 @@ def main() -> None:
 				st.session_state["last_output_dir"] = None
 				st.success("Simulation started in the background.")
 			else:
-				if source_mode == "Floorplan file":
-					config = configure_from_floorplan(
-						str(floorplan_path),
-						scale=scale_value,
-						agent_count=int(agent_count),
-						duration=float(duration),
-						batch_mode=True,
-					)
-					if config is None:
-						st.error("Failed to configure from floorplan. See logs for details.")
-						return
-					apply_overrides(config, int(agent_count), float(duration), float(time_step))
-				else:
-					config_text = st.session_state.get("config_text")
-					if config_text:
-						config, error_message = parse_config_with_error(config_text)
-						if config is None:
-							st.error("Config YAML is invalid. Fix the errors and try again.")
-							if error_message:
-								st.code(error_message)
-							return
-					else:
-						config = load_base_config()
-					if use_overrides:
-						apply_overrides(config, int(agent_count), float(duration), float(time_step))
-
-				if use_overrides or source_mode == "Floorplan file":
-					config.setdefault("visualization", {})
-					config["visualization"]["enabled"] = bool(enable_visuals)
-					apply_hazard_toggles(config, fire_enabled, smoke_enabled, exit_failures_enabled)
-
 				run_simulation(config, output_dir)
 				st.session_state["last_output_dir"] = str(output_dir)
 				st.success("Simulation complete.")
+				if source_mode == "Floorplan file":
+					cfg_path = st.session_state.get("last_generated_config")
+					if cfg_path:
+						st.info(f"Generated config saved: {cfg_path}")
 
 	live_output_dir = st.session_state.get("live_output_dir")
 	live_pid = st.session_state.get("live_pid")

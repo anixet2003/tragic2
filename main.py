@@ -7,6 +7,8 @@ import sys
 import os
 import yaml
 import argparse
+import hashlib
+import copy
 from pathlib import Path
 
 from src.simulation_engine import SimulationEngine
@@ -29,6 +31,71 @@ def load_config(config_path: str) -> dict:
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     return config
+
+
+def save_config(config: dict, config_path: Path) -> None:
+    """Persist configuration to YAML."""
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    serializable_config = to_serializable_config(config)
+    with open(config_path, 'w') as f:
+        yaml.safe_dump(serializable_config, f, sort_keys=False)
+
+
+def to_serializable_config(config: dict) -> dict:
+    """Convert runtime config values (objects, numpy types) into YAML-safe primitives."""
+
+    def _normalize(value):
+        if isinstance(value, dict):
+            return {k: _normalize(v) for k, v in value.items()}
+
+        if isinstance(value, (list, tuple)):
+            return [_normalize(v) for v in value]
+
+        # Serialize environment obstacle objects
+        if hasattr(value, 'x') and hasattr(value, 'y') and hasattr(value, 'width') and hasattr(value, 'height'):
+            return {
+                'x': float(value.x),
+                'y': float(value.y),
+                'width': float(value.width),
+                'height': float(value.height),
+            }
+
+        # Serialize exit objects
+        if hasattr(value, 'id') and hasattr(value, 'position') and hasattr(value, 'width'):
+            pos = value.position
+            if hasattr(pos, 'tolist'):
+                pos = pos.tolist()
+            return {
+                'id': int(value.id),
+                'position': _normalize(pos),
+                'width': float(value.width),
+                'capacity': int(getattr(value, 'capacity', 100)),
+            }
+
+        # Normalize numpy scalars/arrays if present
+        if hasattr(value, 'item') and callable(getattr(value, 'item', None)):
+            try:
+                return value.item()
+            except Exception:
+                pass
+
+        if hasattr(value, 'tolist') and callable(getattr(value, 'tolist', None)):
+            try:
+                return value.tolist()
+            except Exception:
+                pass
+
+        return value
+
+    return _normalize(copy.deepcopy(config))
+
+
+def build_generated_config_path(floorplan_path: str) -> Path:
+    """Build a stable per-floorplan config filename."""
+    floorplan = Path(floorplan_path)
+    safe_stem = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in floorplan.stem).strip('_') or 'floorplan'
+    digest = hashlib.sha1(str(floorplan.resolve()).encode('utf-8')).hexdigest()[:8]
+    return Path('generated_configs') / f"{safe_stem}_{digest}.yaml"
 
 
 def apply_streamlit_overrides(config: dict) -> None:
@@ -307,7 +374,7 @@ def main():
         epilog='Examples:\n'
                '  python main.py myfloorplan.png\n'
                '  python main.py bc.jpeg --scale 10 --agents 100\n'
-               '  python main.py --config scenarios/school_building.yaml',
+               '  python main.py --config generated_configs/bc_1234abcd.yaml',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
@@ -315,16 +382,20 @@ def main():
     parser.add_argument(
         'floorplan',
         type=str,
-        nargs='?',  # Makes it optional (can use --config instead)
+        nargs='?',
         help='Path to your floorplan file (PNG, JPG, BMP, or DXF)'
     )
-    
     parser.add_argument(
         '--config',
         type=str,
-        default='config.yaml',
-        help='Path to configuration file (only used if no floorplan provided)'
+        help='Run from a previously generated config file'
     )
+    parser.add_argument(
+        '--save-config',
+        type=str,
+        help='Optional output path for generated config when using a floorplan'
+    )
+
     parser.add_argument(
         '--scale',
         type=float,
@@ -357,12 +428,23 @@ def main():
     )
     
     args = parser.parse_args()
-    
-    # Handle floorplan upload
+
+    if args.floorplan and args.config:
+        print("Error: Use either a floorplan path or --config, not both.")
+        sys.exit(1)
+
+    if not args.floorplan and not args.config:
+        print("Error: Provide a floorplan path or --config.")
+        print("Usage: python main.py <floorplan.(png|jpg|jpeg|bmp|dxf)> [--scale ... --agents ... --duration ...]")
+        print("   or: python main.py --config generated_configs/<name>.yaml")
+        sys.exit(1)
+
+    generated_config_path = None
+
     if args.floorplan:
         print(f"Loading floorplan: {args.floorplan}\n")
         config = configure_from_floorplan(
-            args.floorplan, 
+            args.floorplan,
             scale=args.scale,
             agent_count=args.agents,
             duration=args.duration,
@@ -372,21 +454,19 @@ def main():
             print("Error: Failed to configure from floorplan.")
             sys.exit(1)
     else:
-        # Load configuration
-        print("Loading configuration...")
         config_path = Path(args.config)
-        
         if not config_path.exists():
-            print(f"Error: Configuration file '{config_path}' not found.")
+            print(f"Error: Config file not found: {config_path}")
             sys.exit(1)
-        
+        print(f"Loading config: {config_path}\n")
         config = load_config(str(config_path))
-        
-        # Apply command-line overrides
+
         if args.agents:
+            config.setdefault('agents', {})
             config['agents']['count'] = args.agents
-        
+
         if args.duration:
+            config.setdefault('simulation', {})
             config['simulation']['duration'] = args.duration
     
     if args.no_viz:
@@ -394,6 +474,13 @@ def main():
 
     if args.time_step:
         config['simulation']['time_step'] = args.time_step
+
+    if args.floorplan:
+        generated_config_path = Path(args.save_config) if args.save_config else build_generated_config_path(args.floorplan)
+        save_config(config, generated_config_path)
+        print(f"[+] Saved generated config: {generated_config_path}")
+        print("    You can rerun without the floorplan using:")
+        print(f"    python main.py --config {generated_config_path}")
 
     apply_streamlit_overrides(config)
     

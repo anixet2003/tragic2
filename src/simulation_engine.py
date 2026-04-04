@@ -41,6 +41,13 @@ class SimulationEngine:
         if 'floorplan_obstacles' in env_config and env_config['floorplan_obstacles']:
             print(f"Loading {len(env_config['floorplan_obstacles'])} obstacles from floorplan...")
             for obstacle in env_config['floorplan_obstacles']:
+                if isinstance(obstacle, dict):
+                    obstacle = Obstacle(
+                        float(obstacle.get('x', 0.0)),
+                        float(obstacle.get('y', 0.0)),
+                        float(obstacle.get('width', 0.0)),
+                        float(obstacle.get('height', 0.0))
+                    )
                 self.environment.add_obstacle(obstacle)
         elif 'obstacles' in config and config['obstacles']['rectangles']:
             for obs_data in config['obstacles']['rectangles']:
@@ -51,6 +58,13 @@ class SimulationEngine:
         if 'floorplan_exits' in env_config and env_config['floorplan_exits']:
             print(f"Loading {len(env_config['floorplan_exits'])} exits from floorplan...")
             for exit_obj in env_config['floorplan_exits']:
+                if isinstance(exit_obj, dict):
+                    exit_obj = Exit(
+                        exit_id=int(exit_obj.get('id', len(self.environment.exits))),
+                        position=np.array(exit_obj.get('position', [0.0, 0.0]), dtype=float),
+                        width=float(exit_obj.get('width', 1.5)),
+                        capacity=int(exit_obj.get('capacity', 100))
+                    )
                 self.environment.add_exit(exit_obj)
         elif 'exits' in config:
             for i, (pos, width) in enumerate(zip(config['exits']['positions'], 
