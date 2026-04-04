@@ -19,12 +19,6 @@ try:
 except ImportError:
     PIL_AVAILABLE = False
 
-try:
-    import ezdxf
-    EZDXF_AVAILABLE = True
-except ImportError:
-    EZDXF_AVAILABLE = False
-
 
 def load_config(config_path: str) -> dict:
     """Load configuration from YAML file."""
@@ -125,9 +119,7 @@ def apply_streamlit_overrides(config: dict) -> None:
 def detect_floorplan_type(filepath: str) -> str:
     """Detect floorplan file type."""
     ext = Path(filepath).suffix.lower()
-    if ext == '.dxf':
-        return 'dxf'
-    elif ext in ['.png', '.jpg', '.jpeg', '.bmp']:
+    if ext in ['.png', '.jpg', '.jpeg', '.bmp']:
         return 'image'
     return None
 
@@ -140,8 +132,6 @@ def auto_detect_scale(filepath: str, floorplan_type: str) -> float:
         # Assume typical building is 50m, so estimate scale
         estimated_scale = max(width_px, height_px) / 50.0
         return estimated_scale
-    elif floorplan_type == 'dxf':
-        return 100.0  # Common: 100 units per meter (cm)
     return 10.0  # Default: 10 pixels per meter
 
 
@@ -157,11 +147,7 @@ def configure_from_floorplan(filepath: str, scale: float = None,
     floorplan_type = detect_floorplan_type(filepath)
     
     if floorplan_type is None:
-        print(f"Error: Unsupported file type. Use .dxf, .png, or .jpg")
-        return None
-    
-    if floorplan_type == 'dxf' and not EZDXF_AVAILABLE:
-        print("Error: DXF support requires ezdxf. Install with: pip install ezdxf")
+        print(f"Error: Unsupported file type. Use .png, .jpg, .jpeg, or .bmp")
         return None
     
     if floorplan_type == 'image' and not PIL_AVAILABLE:
@@ -176,17 +162,11 @@ def configure_from_floorplan(filepath: str, scale: float = None,
         print(f"[+] Auto-detected scale: {scale:.2f} {'pixels' if floorplan_type == 'image' else 'units'} per meter")
     
     # Calculate dimensions
-    if floorplan_type == 'image':
-        img = Image.open(filepath)
-        width_px, height_px = img.size
-        width = width_px / scale
-        height = height_px / scale
-        print(f"[+] Image size: {width_px}x{height_px} pixels -> {width:.1f}x{height:.1f} meters")
-    else:
-        # For DXF, estimate dimensions
-        width = 50.0
-        height = 50.0
-        print(f"[+] Using estimated dimensions: {width:.1f}x{height:.1f} meters")
+    img = Image.open(filepath)
+    width_px, height_px = img.size
+    width = width_px / scale
+    height = height_px / scale
+    print(f"[+] Image size: {width_px}x{height_px} pixels -> {width:.1f}x{height:.1f} meters")
     
     # Configuration for agents and duration
     area = width * height
@@ -247,18 +227,14 @@ def configure_from_floorplan(filepath: str, scale: float = None,
     
     # Parse floorplan to extract obstacles and exits
     print("Parsing floorplan geometry...")
-    from src.floorplan_parser import ImageParser, DXFParser
+    from src.floorplan_parser import ImageParser
     
     obstacles_list = []
     exits_list = []
     
     try:
-        if floorplan_type == 'image':
-            parser = ImageParser(filepath, scale)
-            obstacles_list, exits_list = parser.parse()
-        elif floorplan_type == 'dxf':
-            parser = DXFParser(filepath, scale)
-            obstacles_list, exits_list = parser.parse()
+        parser = ImageParser(filepath, scale)
+        obstacles_list, exits_list = parser.parse()
         
         print(f"[+] Parsed {len(obstacles_list)} obstacles and {len(exits_list)} exits from floorplan")
     except Exception as e:
@@ -383,7 +359,7 @@ def main():
         'floorplan',
         type=str,
         nargs='?',
-        help='Path to your floorplan file (PNG, JPG, BMP, or DXF)'
+        help='Path to your floorplan file (PNG, JPG, JPEG, or BMP)'
     )
     parser.add_argument(
         '--config',
@@ -435,7 +411,7 @@ def main():
 
     if not args.floorplan and not args.config:
         print("Error: Provide a floorplan path or --config.")
-        print("Usage: python main.py <floorplan.(png|jpg|jpeg|bmp|dxf)> [--scale ... --agents ... --duration ...]")
+        print("Usage: python main.py <floorplan.(png|jpg|jpeg|bmp)> [--scale ... --agents ... --duration ...]")
         print("   or: python main.py --config generated_configs/<name>.yaml")
         sys.exit(1)
 

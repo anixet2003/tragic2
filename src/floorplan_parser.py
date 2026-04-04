@@ -1,17 +1,11 @@
 """
 Floorplan Parsers
-DXF and raster image parsing for environment generation
+Raster image parsing for environment generation
 """
 
 import numpy as np
 from typing import List, Tuple
 from pathlib import Path
-
-try:
-    import ezdxf
-    EZDXF_AVAILABLE = True
-except ImportError:
-    EZDXF_AVAILABLE = False
 
 try:
     from PIL import Image
@@ -33,7 +27,7 @@ class MapMeta:
     
     def __init__(self, scale: float = 1.0, origin: Tuple[float, float] = (0, 0), 
                  rotation: float = 0.0, flip_y: bool = False):
-        self.scale = scale  # pixels or DXF units per meter
+        self.scale = scale  # pixels per meter
         self.origin = np.array(origin, dtype=float)
         self.rotation = rotation  # radians
         self.flip_y = flip_y
@@ -69,107 +63,6 @@ class MapMeta:
             p[1] = -p[1]
         # Translate
         return p + self.origin
-
-
-class DXFParser:
-    """Parse AutoCAD DXF files for floorplan geometry."""
-    
-    def __init__(self, file_path: str, scale: float = 100.0):
-        if not EZDXF_AVAILABLE:
-            raise ImportError("ezdxf library not available. Install with: pip install ezdxf")
-        
-        self.file_path = Path(file_path)
-        self.scale = scale
-        self.meta = MapMeta(scale=scale)
-        
-        self.walls = []
-        self.exits = []
-        self.obstacles = []
-    
-    def parse(self) -> Tuple[List[Obstacle], List[Exit]]:
-        """
-        Parse DXF file and extract geometry.
-        
-        Returns:
-            Tuple of (obstacles, exits)
-        """
-        if not self.file_path.exists():
-            raise FileNotFoundError(f"DXF file not found: {self.file_path}")
-        
-        doc = ezdxf.readfile(str(self.file_path))
-        msp = doc.modelspace()
-        
-        # Extract lines (walls)
-        for entity in msp.query('LINE'):
-            start = np.array([entity.dxf.start.x, entity.dxf.start.y])
-            end = np.array([entity.dxf.end.x, entity.dxf.end.y])
-            
-            # Convert to world coordinates
-            start_world = self.meta.to_world(start)
-            end_world = self.meta.to_world(end)
-            
-            # Create wall as thin obstacle
-            self._create_wall_obstacle(start_world, end_world)
-        
-        # Extract polylines (walls)
-        for entity in msp.query('LWPOLYLINE POLYLINE'):
-            points = []
-            for point in entity.get_points():
-                p = np.array([point[0], point[1]])
-                points.append(self.meta.to_world(p))
-            
-            # Create walls from segments
-            for i in range(len(points) - 1):
-                self._create_wall_obstacle(points[i], points[i + 1])
-        
-        # Extract circles (could be exits or obstacles)
-        exit_layer_names = ['EXIT', 'EXITS', 'DOOR', 'DOORS']
-        for entity in msp.query('CIRCLE'):
-            center = np.array([entity.dxf.center.x, entity.dxf.center.y])
-            center_world = self.meta.to_world(center)
-            radius = entity.dxf.radius / self.scale
-            
-            layer = entity.dxf.layer.upper() if hasattr(entity.dxf, 'layer') else ''
-            
-            if any(name in layer for name in exit_layer_names):
-                # This is an exit
-                exit_obj = Exit(
-                    exit_id=len(self.exits),
-                    position=center_world,
-                    width=radius * 2,
-                    capacity=100
-                )
-                self.exits.append(exit_obj)
-        
-        return self.obstacles, self.exits
-    
-    def _create_wall_obstacle(self, start: np.ndarray, end: np.ndarray, thickness: float = 0.2):
-        """Create obstacle from wall line."""
-        # Calculate wall direction and perpendicular
-        direction = end - start
-        length = np.linalg.norm(direction)
-        
-        if length < 0.01:
-            return
-        
-        direction = direction / length
-        perpendicular = np.array([-direction[1], direction[0]])
-        
-        # Create rectangular obstacle
-        half_thickness = thickness / 2
-        corner1 = start - perpendicular * half_thickness
-        corner2 = start + perpendicular * half_thickness
-        corner3 = end + perpendicular * half_thickness
-        corner4 = end - perpendicular * half_thickness
-        
-        # Bounding box
-        min_x = min(corner1[0], corner2[0], corner3[0], corner4[0])
-        min_y = min(corner1[1], corner2[1], corner3[1], corner4[1])
-        max_x = max(corner1[0], corner2[0], corner3[0], corner4[0])
-        max_y = max(corner1[1], corner2[1], corner3[1], corner4[1])
-        
-        obstacle = Obstacle(min_x, min_y, max_x - min_x, max_y - min_y)
-        self.obstacles.append(obstacle)
 
 
 class ImageParser:

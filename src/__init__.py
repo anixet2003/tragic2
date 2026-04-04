@@ -13,7 +13,7 @@ from .hazard_manager import HazardManager
 from .analytics import AnalyticsCollector
 from .visualizer import Visualizer
 from .simulation_engine import SimulationEngine
-from .floorplan_parser import DXFParser, ImageParser, MapMeta
+from .floorplan_parser import ImageParser, MapMeta
 
 __all__ = [
     'Agent',
@@ -29,7 +29,6 @@ __all__ = [
     'AnalyticsCollector',
     'Visualizer',
     'SimulationEngine',
-    'DXFParser',
     'ImageParser',
     'MapMeta'
 ]

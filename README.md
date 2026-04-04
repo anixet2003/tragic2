@@ -2,7 +2,9 @@
 
 Traffic Analysis with Generative Intelligence and Crowd Simulation.
 
-TRAGIC simulates crowd evacuation on floorplans (image or DXF), applies hazards, and generates analytics plus floor-plan improvement suggestions.
+TRAGIC simulates crowd evacuation on raster floorplans, applies hazards, and generates analytics plus floor-plan improvement suggestions.
+
+Note: DXF support has been removed. The project is image-only.
 
 ## Quick Start
 
@@ -22,7 +24,7 @@ python main.py path/to/floorplan.jpg
 ```
 
 Supported formats:
-- `.png`, `.jpg`, `.jpeg`, `.bmp`, `.dxf`
+- `.png`, `.jpg`, `.jpeg`, `.bmp`
 
 When you run with a floorplan, TRAGIC auto-generates a reusable config in `generated_configs/`.
 
@@ -30,6 +32,12 @@ When you run with a floorplan, TRAGIC auto-generates a reusable config in `gener
 
 ```bash
 python main.py --config generated_configs/your_floorplan_xxxxxxxx.yaml
+```
+
+Optional custom generated-config path during floorplan run:
+
+```bash
+python main.py bc.jpeg --save-config generated_configs/bc_custom.yaml
 ```
 
 ### Common flags
@@ -58,6 +66,8 @@ python ui_runner.py
 Current Streamlit modes:
 - Floorplan file: upload floorplan, run simulation, and auto-save generated config.
 - Generated config file: run directly from a previously generated config.
+
+Tip: Run once in "Floorplan file" mode to create entries under `generated_configs/`, then reuse them in "Generated config file" mode.
 
 ## Outputs
 

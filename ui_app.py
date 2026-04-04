@@ -270,7 +270,7 @@ def main() -> None:
 
 	if source_mode == "Floorplan file":
 		st.subheader("Floorplan")
-		uploaded = st.file_uploader("Upload a floorplan image or DXF", type=["png", "jpg", "jpeg", "bmp", "dxf"])
+		uploaded = st.file_uploader("Upload a floorplan image", type=["png", "jpg", "jpeg", "bmp"])
 		scale_value = st.number_input("Scale (pixels per meter)", min_value=1.0, max_value=500.0, value=10.0, step=1.0)
 		floorplan_path = write_uploaded_file(uploaded)
 		if uploaded is not None:
