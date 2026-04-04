@@ -322,7 +322,7 @@ class AStarPathfinder:
                             return (nx, ny)
         return cell
     
-    def _simplify_path(self, path: List[np.ndarray], tolerance: float = 2.0) -> List[np.ndarray]:
+    def _simplify_path(self, path: List[np.ndarray]) -> List[np.ndarray]:
         """Simplify path by removing unnecessary waypoints."""
         if len(path) <= 2:
             return path

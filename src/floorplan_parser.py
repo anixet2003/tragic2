@@ -77,7 +77,6 @@ class ImageParser:
         self.meta = MapMeta(scale=scale)
         
         self.image = None
-        self.walls = []
         self.exits = []
         self.obstacles = []
     
@@ -105,7 +104,7 @@ class ImageParser:
         
         # ADAPTIVE thresholding - works with any image!
         # Calculate histogram to find dark vs light regions
-        hist, bin_edges = np.histogram(grayscale, bins=256, range=(0, 256))
+        hist, _ = np.histogram(grayscale, bins=256, range=(0, 256))
         
         # Find threshold using Otsu's method (automatic)
         total = grayscale.size
@@ -304,7 +303,7 @@ class ImageParser:
         
         # Create exit for each cluster and merge if too close in world coordinates
         temp_exits = []
-        for cluster_id, cluster in enumerate(exit_clusters):
+        for cluster in exit_clusters:
             # Get centroid of this exit cluster
             center_x = np.mean(cluster[:, 0])
             center_y = np.mean(cluster[:, 1])

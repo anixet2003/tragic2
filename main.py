@@ -415,8 +415,6 @@ def main():
         print("   or: python main.py --config generated_configs/<name>.yaml")
         sys.exit(1)
 
-    generated_config_path = None
-
     if args.floorplan:
         print(f"Loading floorplan: {args.floorplan}\n")
         config = configure_from_floorplan(

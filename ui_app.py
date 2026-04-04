@@ -12,11 +12,10 @@ import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 import psutil
 import streamlit as st
-import yaml
 
 try:
 	from streamlit_autorefresh import st_autorefresh
@@ -185,29 +184,6 @@ def read_text_file(path: Path) -> Optional[str]:
 	if not path.exists():
 		return None
 	return path.read_text(encoding="utf-8")
-
-
-def parse_config_with_error(config_text: str) -> Tuple[Optional[dict], Optional[str]]:
-	try:
-		parsed = yaml.safe_load(config_text)
-	except yaml.YAMLError as exc:
-		return None, format_yaml_error(exc, config_text)
-	if not isinstance(parsed, dict):
-		return None, "Config root must be a YAML mapping (key/value dictionary)."
-	return parsed, None
-
-
-def format_yaml_error(exc: yaml.YAMLError, config_text: str) -> str:
-	marker = getattr(exc, "problem_mark", None)
-	if marker is None:
-		return "Invalid YAML."
-
-	line_no = marker.line + 1
-	col_no = marker.column + 1
-	lines = config_text.splitlines()
-	bad_line = lines[line_no - 1] if 0 <= line_no - 1 < len(lines) else ""
-	caret = " " * (col_no - 1) + "^"
-	return f"YAML error at line {line_no}, column {col_no}:\n{bad_line}\n{caret}"
 
 
 def main() -> None:

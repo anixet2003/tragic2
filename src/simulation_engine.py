@@ -289,7 +289,7 @@ class SimulationEngine:
                 agent.evacuated = True
                 agent.velocity = np.zeros(2)
                 exit_reached.total_evacuated += 1
-                self.analytics.record_evacuation(agent.id, self.current_time)
+                self.analytics.record_evacuation(self.current_time)
         
         # Apply hazard effects
         self.hazard_manager.apply_hazard_effects(self.agents, self.dt)
@@ -298,11 +298,11 @@ class SimulationEngine:
         for agent in self.agents:
             if not agent.alive and agent.health <= 0:
                 if agent.id not in [a for a in self.agents if hasattr(a, '_death_recorded')]:
-                    self.analytics.record_death(agent.id, self.current_time)
+                    self.analytics.record_death(self.current_time)
                     agent._death_recorded = True
         
         # Update analytics
-        self.analytics.update(self.agents, self.environment.grid, self.current_time, self.dt)
+        self.analytics.update(self.agents, self.environment.grid, self.current_time)
         
         # Advance time
         self.current_time += self.dt

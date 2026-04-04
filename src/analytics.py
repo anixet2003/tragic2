@@ -44,7 +44,7 @@ class AnalyticsCollector:
         # Last sampling time
         self.last_sample_time = 0.0
     
-    def update(self, agents: List, grid, current_time: float, dt: float):
+    def update(self, agents: List, grid, current_time: float):
         """
         Update analytics at each timestep.
         
@@ -52,7 +52,6 @@ class AnalyticsCollector:
             agents: List of all agents
             grid: Environment grid
             current_time: Current simulation time
-            dt: Time step
         """
         if not self.enabled:
             return
@@ -113,11 +112,11 @@ class AnalyticsCollector:
         self.density_history.append(density.copy())
         self.panic_history.append(panic_map.copy())
     
-    def record_evacuation(self, agent_id: int, time: float):
+    def record_evacuation(self, time: float):
         """Record agent evacuation."""
         self.evacuation_times.append(time)
     
-    def record_death(self, agent_id: int, time: float):
+    def record_death(self, time: float):
         """Record agent death."""
         self.death_times.append(time)
     
